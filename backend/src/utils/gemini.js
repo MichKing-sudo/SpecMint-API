@@ -33,7 +33,9 @@ Then for each route, create a section:
 ---
 
 Rules:
-- Use strict Markdown table format for the summary
+- Generate the table using EXACTLY this pipe format: | Method | Path | Description | with separator |---|---|---|. Each row MUST start on a new line.
+- Path parameters (req.params) MUST ONLY be listed for routes whose path contains a colon (:) segment. For example, /api/v1/users/:id has path param "id". A path like /api/v1/users has NO path params. NEVER invent path parameters for parameterless routes.
+- If an endpoint returns res.status(204).send() or res.sendStatus(204) or sends no body at all, do NOT create an empty JSON code block. Instead, write exactly: **Response:** No Content (Status 204).
 - Generate meaningful descriptions based on the route paths
 - Be concise but informative
 - Always include the method in uppercase

@@ -1,22 +1,7 @@
 import { useState } from 'react';
 import { FileText, Copy, Check } from 'lucide-react';
-
-const METHOD_COLORS = {
-  GET: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-  POST: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
-  PUT: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-  PATCH: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  DELETE: 'bg-red-500/20 text-red-400 border-red-500/30',
-};
-
-function MethodBadge({ method }) {
-  const colors = METHOD_COLORS[method] || 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30';
-  return (
-    <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold border ${colors}`}>
-      {method}
-    </span>
-  );
-}
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 function SkeletonLoader() {
   return (
@@ -52,68 +37,218 @@ function SkeletonLoader() {
   );
 }
 
-function renderMarkdown(md) {
-  let html = md;
-
-  // Code blocks
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="code-block"><code>$2</code></pre>');
-
-  // Tables - wrap in card-like container
-  html = html.replace(/^(\|.+\|)\n(\|[-| :]+\|)\n((?:\|.+\|\n?)*)/gm, (_, header, sep, body) => {
-    const headers = header.split('|').filter(c => c.trim()).map(c => {
-      const trimmed = c.trim();
-      const methodMatch = trimmed.match(/^(GET|POST|PUT|PATCH|DELETE)$/i);
-      if (methodMatch) {
-        return `<th class="method-header" data-method="${methodMatch[1].toUpperCase()}">${methodMatch[1].toUpperCase()}</th>`;
-      }
-      return `<th>${trimmed}</th>`;
-    }).join('');
-    const rows = body.trim().split('\n').map((row, i) => {
-      const cells = row.split('|').filter(c => c.trim()).map(c => {
-        const trimmed = c.trim();
-        const methodMatch = trimmed.match(/^(GET|POST|PUT|PATCH|DELETE)$/i);
-        if (methodMatch) {
-          return `<td><span class="method-badge" data-method="${methodMatch[1].toUpperCase()}">${methodMatch[1].toUpperCase()}</span></td>`;
-        }
-        return `<td>${trimmed}</td>`;
-      }).join('');
-      return `<tr class="table-row" data-index="${i}">${cells}</tr>`;
-    }).join('');
-    return `<div class="table-wrapper"><table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table></div>`;
-  });
-
-  // Headings
-  html = html.replace(/^### (.+)$/gm, (_, text) => {
-    const methodMatch = text.match(/^(GET|POST|PUT|PATCH|DELETE)\s+(.+)$/i);
-    if (methodMatch) {
-      return `<div class="endpoint-card" id="endpoint-${methodMatch[2].replace(/[^a-zA-Z0-9]/g, '-')}"><h3 class="endpoint-title"><span class="method-badge" data-method="${methodMatch[1].toUpperCase()}">${methodMatch[1].toUpperCase()}</span> <code class="endpoint-path">${methodMatch[2]}</code></h3>`;
-    }
-    return `<h3>${text}</h3>`;
-  });
-  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-
-  // Close endpoint cards before next h2 or h3
-  html = html.replace(/(<div class="endpoint-card".*?<\/h3>)/g, '$1<div class="endpoint-body">');
-  html = html.replace(/(<h[23]>)/g, '</div></div>$1');
-  html = html.replace(/(<h2>)/g, '</div></div>$1');
-
-  // Horizontal rules
-  html = html.replace(/^---$/gm, '<hr>');
-
-  // Bold and inline code
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-  // Lists
-  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
-
-  // Paragraphs
-  html = html.replace(/^(?!<[huptld]|<li|<hr|<table|<pre|<div|<\/)(.+)$/gm, '<p>$1</p>');
-
-  return html;
+function normalizeMarkdown(markdownFromServer) {
+  if (typeof markdownFromServer !== 'string') return '';
+  return markdownFromServer
+    .replace(/\\n/g, '\n')
+    .replace(/\n{2,}/g, '\n\n');
 }
+
+function extractMethod(text) {
+  const match = String(text).match(/^(GET|POST|PUT|PATCH|DELETE)$/i);
+  return match ? match[1].toUpperCase() : null;
+}
+
+const METHOD_BADGE_STYLES = {
+  GET: 'inline-block px-2.5 py-0.5 rounded text-xs font-bold border bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  POST: 'inline-block px-2.5 py-0.5 rounded text-xs font-bold border bg-sky-500/20 text-sky-400 border-sky-500/30',
+  PUT: 'inline-block px-2.5 py-0.5 rounded text-xs font-bold border bg-amber-500/20 text-amber-400 border-amber-500/30',
+  PATCH: 'inline-block px-2.5 py-0.5 rounded text-xs font-bold border bg-orange-500/20 text-orange-400 border-orange-500/30',
+  DELETE: 'inline-block px-2.5 py-0.5 rounded text-xs font-bold border bg-red-500/20 text-red-400 border-red-500/30',
+};
+
+function MethodBadgeInline({ method }) {
+  const style = METHOD_BADGE_STYLES[method] || METHOD_BADGE_STYLES.GET;
+  return <span className={style}>{method}</span>;
+}
+
+function normalizeMarkdownForTable(markdownFromServer) {
+  if (typeof markdownFromServer !== 'string') return '';
+  return markdownFromServer
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\r/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/\n{3,}/g, '\n\n');
+}
+
+function fixTableFormat(md) {
+  const lines = md.split('\n');
+  const result = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    if (line.includes('|') && !line.trim().startsWith('```')) {
+      const tableLines = [];
+      while (i < lines.length && lines[i].includes('|') && !lines[i].trim().startsWith('```')) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+
+      if (tableLines.length >= 2) {
+        const cleaned = tableLines.map(l =>
+          l.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim()).filter(Boolean)
+        );
+
+        const isSeparator = cleaned.every(cells =>
+          cells.every(c => /^[-:]+$/.test(c))
+        );
+
+        if (isSeparator && cleaned.length === 1) {
+          i--;
+          continue;
+        }
+
+        if (cleaned.length >= 2) {
+          let header = cleaned[0];
+          let startIdx = 0;
+
+          if (cleaned.length > 1 && cleaned[1].every(c => /^[-:]+$/.test(c))) {
+            startIdx = 1;
+          }
+
+          const rows = cleaned.slice(startIdx);
+
+          if (header.length === 3) {
+            const hasMethod = header.some(h => /method/i.test(h));
+            const hasPath = header.some(h => /path/i.test(h));
+            const hasDescription = header.some(h => /desc/i.test(h));
+
+            if (hasMethod && hasPath) {
+              let fixedTable = '| Method | Path' + (hasDescription ? ' | Description' : '') + ' |\n';
+              fixedTable += '|---|---' + (hasDescription ? '|---' : '') + '|\n';
+
+              for (const row of rows) {
+                if (row.every(c => /^[-:]+$/.test(c))) continue;
+                const padded = row.map(c => c || '').slice(0, header.length);
+                while (padded.length < header.length) padded.push('');
+                fixedTable += '| ' + padded.join(' | ') + ' |\n';
+              }
+
+              result.push(fixedTable);
+              continue;
+            }
+          }
+
+          let table = '| ' + header.join(' | ') + ' |\n';
+          table += '| ' + header.map(() => '---').join(' | ') + ' |\n';
+          for (const row of rows) {
+            if (row.every(c => /^[-:]+$/.test(c))) continue;
+            const padded = row.map(c => c || '').slice(0, header.length);
+            while (padded.length < header.length) padded.push('');
+            table += '| ' + padded.join(' | ') + ' |\n';
+          }
+
+          result.push(table);
+          continue;
+        }
+      }
+      i--;
+    }
+
+    result.push(lines[i]);
+    i++;
+  }
+
+  return result.join('\n');
+}
+
+const mdComponents = {
+  table: ({ children }) => (
+    <div className="my-4 overflow-x-auto rounded-lg border border-zinc-700/50">
+      <table className="w-full text-sm text-left">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => (
+    <thead className="bg-zinc-800/80 border-b border-zinc-700/50">{children}</thead>
+  ),
+  tbody: ({ children }) => (
+    <tbody className="divide-y divide-zinc-700/30">{children}</tbody>
+  ),
+  tr: ({ children }) => (
+    <tr className="table-row hover:bg-zinc-800/40 transition-colors">{children}</tr>
+  ),
+  th: ({ children }) => (
+    <th className="px-4 py-3 text-xs font-semibold text-zinc-300 uppercase tracking-wider">{children}</th>
+  ),
+  td: ({ children }) => {
+    const text = String(children).trim();
+    const method = extractMethod(text);
+    if (method) {
+      return (
+        <td className="px-4 py-3">
+          <span className={METHOD_BADGE_STYLES[method]}>{method}</span>
+        </td>
+      );
+    }
+    return <td className="px-4 py-3 text-zinc-300">{children}</td>;
+  },
+  h1: ({ children }) => (
+    <h1 className="text-2xl font-bold text-zinc-100 mb-4 mt-2">{children}</h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="text-lg font-semibold text-zinc-200 mb-3 mt-6 pb-2 border-b border-zinc-700/50">{children}</h2>
+  ),
+  h3: ({ children }) => {
+    const text = String(children);
+    const methodMatch = text.match(/(GET|POST|PUT|PATCH|DELETE)/i);
+    if (methodMatch) {
+      const method = methodMatch[1].toUpperCase();
+      const path = text.replace(method, '').replace(/[`*]/g, '').trim();
+      return (
+        <h3 className="flex items-center gap-3 text-base font-semibold text-zinc-100 mb-2 mt-6 p-3 bg-zinc-800/60 rounded-lg border border-zinc-700/40">
+          <span className={METHOD_BADGE_STYLES[method]}>{method}</span>
+          <code className="text-purple-300 font-mono text-sm">{path}</code>
+        </h3>
+      );
+    }
+    return <h3 className="text-base font-semibold text-zinc-200 mb-2 mt-4">{children}</h3>;
+  },
+  p: ({ children }) => (
+    <p className="text-zinc-400 text-sm leading-relaxed mb-3">{children}</p>
+  ),
+  code: ({ children, className }) => {
+    const isInline = !className;
+    if (isInline) {
+      return (
+        <code className="px-1.5 py-0.5 rounded bg-zinc-800 text-purple-300 text-xs font-mono">{children}</code>
+      );
+    }
+    return (
+      <pre className="my-3 p-4 rounded-lg bg-zinc-950 border border-zinc-800 overflow-x-auto">
+        <code className="text-xs font-mono text-zinc-300 leading-relaxed">{children}</code>
+      </pre>
+    );
+  },
+  ul: ({ children }) => (
+    <ul className="list-none space-y-1.5 mb-3 ml-1">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="list-decimal space-y-1.5 mb-3 ml-4 text-zinc-400 text-sm">{children}</ol>
+  ),
+  li: ({ children }) => (
+    <li className="text-sm text-zinc-400 before:content-['•'] before:mr-2 before:text-purple-400">{children}</li>
+  ),
+  strong: ({ children }) => (
+    <strong className="font-semibold text-zinc-200">{children}</strong>
+  ),
+  em: ({ children }) => (
+    <em className="italic text-zinc-400">{children}</em>
+  ),
+  a: ({ href, children }) => (
+    <a href={href} target="_blank" rel="noopener noreferrer"
+      className="text-purple-400 hover:text-purple-300 underline underline-offset-2 transition-colors">{children}</a>
+  ),
+  hr: () => (
+    <hr className="my-6 border-zinc-700/50" />
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="pl-4 border-l-2 border-purple-500/50 text-zinc-400 italic my-3">{children}</blockquote>
+  ),
+};
 
 export default function MarkdownViewer({ content, loading }) {
   const [copied, setCopied] = useState(false);
@@ -153,7 +288,8 @@ export default function MarkdownViewer({ content, loading }) {
     );
   }
 
-  const rendered = renderMarkdown(content);
+  let formattedMarkdown = normalizeMarkdownForTable(content);
+  formattedMarkdown = fixTableFormat(formattedMarkdown);
 
   return (
     <div className="flex flex-col h-full relative">
@@ -162,10 +298,11 @@ export default function MarkdownViewer({ content, loading }) {
         <span className="text-sm font-medium text-zinc-300">Documentation Output</span>
       </div>
 
-      <div
-        className="flex-1 overflow-auto p-6 bg-zinc-900 markdown-body"
-        dangerouslySetInnerHTML={{ __html: rendered }}
-      />
+      <div className="flex-1 overflow-auto p-6 bg-zinc-900 markdown-body">
+        <Markdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+          {formattedMarkdown}
+        </Markdown>
+      </div>
 
       <button
         onClick={handleCopy}

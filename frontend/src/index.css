@@ -200,6 +200,69 @@
   padding: 1rem 1.25rem;
 }
 
+/* Card Sections */
+.markdown-body .card-section {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #27272a;
+}
+
+.markdown-body .card-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.markdown-body .card-section h4 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #a1a1aa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.5rem 0;
+}
+
+.markdown-body .card-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.markdown-body .card-section li {
+  color: #d4d4d8;
+  font-size: 0.875rem;
+  padding: 0.25rem 0;
+}
+
+.markdown-body .card-section li::before {
+  content: '';
+  display: none;
+}
+
+.markdown-body .card-section pre {
+  background: #0f0f11;
+  border: 1px solid #27272a;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  margin: 0;
+}
+
+.markdown-body .card-section code {
+  background: none;
+  padding: 0;
+  color: #d4d4d8;
+  font-size: 0.8rem;
+}
+
+.markdown-body .card-section.error pre {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.markdown-body .card-section.error h4 {
+  color: #f87171;
+}
+
 /* Lists */
 .markdown-body ul {
   list-style: none;
