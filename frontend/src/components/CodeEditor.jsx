@@ -1,32 +1,72 @@
 import { useState, useRef, useCallback } from 'react';
 import { Code2, Trash2 } from 'lucide-react';
 
-const KEYWORDS = /\b(const|let|var|function|async|await|return|if|else|try|catch|throw|new|module|exports|require)\b/g;
-const METHODS = /\b(get|post|put|patch|delete|options|head)\b/g;
-const STRINGS = /('[^']*'|"[^"]*"|`[^`]*`)/g;
-const COMMENTS = /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm;
-const NUMBERS = /\b(\d+)\b/g;
-const OBJECTS = /\b(res|req|router|app|console|Error|JSON|Math|Date)\b/g;
-const PROPS = /\.(\w+)\s*\(/g;
-const ARROW = /=>/g;
+const TOKENS = [
+  { type: 'comment',  regex: /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm },
+  { type: 'string',   regex: /('[^']*'|"[^"]*"|`[^`]*`)/g },
+  { type: 'keyword',  regex: /\b(const|let|var|function|async|await|return|if|else|try|catch|throw|new|module|exports|require)\b/g },
+  { type: 'method',   regex: /\b(get|post|put|patch|delete|options|head)\b/g },
+  { type: 'object',   regex: /\b(res|req|router|app|console|Error|JSON|Math|Date)\b/g },
+  { type: 'arrow',    regex: /=>/g },
+  { type: 'number',   regex: /\b(\d+)\b/g },
+];
+
+const STYLES = {
+  comment:  'color:#71717a;font-style:italic',
+  string:   'color:#34d399',
+  keyword:  'color:#c084fc;font-weight:600',
+  method:   'color:#38bdf8;font-weight:600',
+  object:   'color:#fcd34d',
+  arrow:    'color:#f472b6;font-weight:600',
+  number:   'color:#fb923c',
+  plain:    'color:#d4d4d8',
+};
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 function highlightCode(code) {
   if (!code) return '';
-  let html = code
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 
-  html = html.replace(COMMENTS, '<span style="color:#71717a;font-style:italic">$1</span>');
-  html = html.replace(STRINGS, '<span style="color:#34d399">$1</span>');
-  html = html.replace(KEYWORDS, '<span style="color:#c084fc;font-weight:600">$1</span>');
-  html = html.replace(METHODS, '<span style="color:#38bdf8;font-weight:600">$1</span>');
-  html = html.replace(OBJECTS, '<span style="color:#fcd34d">$1</span>');
-  html = html.replace(PROPS, '.<span style="color:#7dd3fc">$1</span>(');
-  html = html.replace(ARROW, '<span style="color:#f472b6;font-weight:600">=&gt;</span>');
-  html = html.replace(NUMBERS, '<span style="color:#fb923c">$1</span>');
+  const tokens = [];
+  const used = new Set();
 
-  return html;
+  for (const { type, regex } of TOKENS) {
+    const re = new RegExp(regex.source, regex.flags);
+    let m;
+    while ((m = re.exec(code)) !== null) {
+      const start = m.index;
+      const end = start + m[0].length;
+      let overlaps = false;
+      for (let i = start; i < end; i++) {
+        if (used.has(i)) { overlaps = true; break; }
+      }
+      if (!overlaps) {
+        tokens.push({ type, start, end, text: m[0] });
+        for (let i = start; i < end; i++) used.add(i);
+      }
+    }
+  }
+
+  tokens.sort((a, b) => a.start - b.start);
+
+  let result = '';
+  let pos = 0;
+
+  for (const tok of tokens) {
+    if (tok.start > pos) {
+      result += `<span style="${STYLES.plain}">${escapeHtml(code.slice(pos, tok.start))}</span>`;
+    }
+    result += `<span style="${STYLES[tok.type]}">${escapeHtml(tok.text)}</span>`;
+    pos = tok.end;
+  }
+
+  if (pos < code.length) {
+    result += `<span style="${STYLES.plain}">${escapeHtml(code.slice(pos))}</span>`;
+  }
+
+  return result;
 }
 
 export default function CodeEditor({ value, onChange }) {
@@ -37,14 +77,12 @@ export default function CodeEditor({ value, onChange }) {
   const handlePaste = useCallback((e) => {
     e.preventDefault();
     const text = e.clipboardData.getData('text/plain');
-    const textarea = textareaRef.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const newValue = value.substring(0, start) + text + value.substring(end);
-    onChange(newValue);
-    setTimeout(() => {
-      textarea.selectionStart = textarea.selectionEnd = start + text.length;
-    }, 0);
+    const ta = textareaRef.current;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const next = value.substring(0, start) + text + value.substring(end);
+    onChange(next);
+    setTimeout(() => { ta.selectionStart = ta.selectionEnd = start + text.length; }, 0);
   }, [value, onChange]);
 
   const handleScroll = useCallback(() => {
@@ -53,11 +91,6 @@ export default function CodeEditor({ value, onChange }) {
       highlightRef.current.scrollLeft = textareaRef.current.scrollLeft;
     }
   }, []);
-
-  const handleClear = () => {
-    onChange('');
-    textareaRef.current?.focus();
-  };
 
   return (
     <div className="flex flex-col h-full">
@@ -68,7 +101,7 @@ export default function CodeEditor({ value, onChange }) {
         </div>
         {value && (
           <button
-            onClick={handleClear}
+            onClick={() => { onChange(''); textareaRef.current?.focus(); }}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs text-zinc-400 hover:text-red-400 hover:bg-zinc-700 transition-colors"
           >
             <Trash2 size={12} />
@@ -78,7 +111,6 @@ export default function CodeEditor({ value, onChange }) {
       </div>
 
       <div className={`flex-1 relative ${focused ? 'ring-2 ring-purple-500/50 ring-inset' : ''}`}>
-        {/* Highlight layer */}
         <div
           ref={highlightRef}
           className="absolute inset-0 overflow-auto bg-zinc-900 pointer-events-none"
@@ -90,7 +122,6 @@ export default function CodeEditor({ value, onChange }) {
           />
         </div>
 
-        {/* Input layer */}
         <textarea
           ref={textareaRef}
           value={value}
@@ -99,7 +130,7 @@ export default function CodeEditor({ value, onChange }) {
           onScroll={handleScroll}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder={`Paste your Express.js routes here...\n\nExample:\napp.get('/api/v1/users', (req, res) => { ... });\napp.post('/api/v1/users', (req, res) => { ... });`}
+          placeholder={"Paste your Express.js routes here...\n\nExample:\napp.get('/api/v1/users', (req, res) => { ... });\napp.post('/api/v1/users', (req, res) => { ... });"}
           spellCheck={false}
           autoComplete="off"
           autoCorrect="off"
