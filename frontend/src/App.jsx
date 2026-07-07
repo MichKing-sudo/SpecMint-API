@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2, Zap } from 'lucide-react';
+import { Loader2, Zap, Trash2 } from 'lucide-react';
 import CodeEditor from './components/CodeEditor';
 import MarkdownViewer from './components/MarkdownViewer';
 
@@ -103,6 +103,16 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3">
+          {code && (
+            <button
+              onClick={() => { setCode(''); setMarkdown(''); setError(''); }}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-zinc-800 text-zinc-400 hover:text-red-400 hover:bg-zinc-700 transition-colors"
+            >
+              <Trash2 size={12} />
+              Clear All
+            </button>
+          )}
+
           <button
             onClick={handleLoadSample}
             className="text-xs px-3 py-1.5 rounded-md bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors"
