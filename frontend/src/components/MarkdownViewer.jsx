@@ -22,19 +22,16 @@ function SkeletonLoader() {
   return (
     <div className="space-y-4 animate-pulse">
       <div className="h-7 w-48 bg-zinc-700/50 rounded" />
-      <div className="h-4 w-72 bg-zinc-700/30 rounded" />
 
       <div className="mt-6 border border-zinc-700/50 rounded-lg overflow-hidden">
         <div className="bg-zinc-800/50 px-4 py-3 flex gap-8">
           <div className="h-4 w-16 bg-zinc-600/50 rounded" />
-          <div className="h-4 w-40 bg-zinc-600/50 rounded" />
-          <div className="h-4 w-32 bg-zinc-600/50 rounded" />
+          <div className="h-4 w-48 bg-zinc-600/50 rounded" />
         </div>
         {[1, 2, 3].map(i => (
           <div key={i} className="px-4 py-3 flex gap-8 border-t border-zinc-700/30">
             <div className="h-4 w-12 bg-zinc-700/40 rounded" />
-            <div className="h-4 w-36 bg-zinc-700/40 rounded" />
-            <div className="h-4 w-52 bg-zinc-700/40 rounded" />
+            <div className="h-4 w-40 bg-zinc-700/40 rounded" />
           </div>
         ))}
       </div>
@@ -44,9 +41,8 @@ function SkeletonLoader() {
           <div key={i} className="border border-zinc-700/50 rounded-lg p-4 space-y-3">
             <div className="flex items-center gap-3">
               <div className="h-6 w-14 bg-zinc-600/50 rounded" />
-              <div className="h-5 w-48 bg-zinc-600/50 rounded" />
+              <div className="h-5 w-40 bg-zinc-600/50 rounded" />
             </div>
-            <div className="h-4 w-full bg-zinc-700/30 rounded" />
             <div className="h-4 w-3/4 bg-zinc-700/30 rounded" />
             <div className="h-20 w-full bg-zinc-700/20 rounded" />
           </div>

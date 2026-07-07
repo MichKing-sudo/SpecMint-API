@@ -18,7 +18,7 @@ async function analyzeCode(req, res) {
       });
     }
 
-    const markdown = await generateDocumentation(routes);
+    const markdown = await generateDocumentation(routes, code);
 
     res.json({ routes, markdown });
   } catch (err) {
