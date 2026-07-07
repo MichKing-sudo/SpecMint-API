@@ -146,7 +146,7 @@ export default function App() {
 
         {/* Right: Viewer */}
         <div className="w-1/2">
-          <MarkdownViewer content={markdown} />
+          <MarkdownViewer content={markdown} loading={loading} />
         </div>
       </div>
     </div>

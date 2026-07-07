@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.caret-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* Markdown Body */
 .markdown-body {
   color: #d4d4d8;
   line-height: 1.7;
@@ -49,65 +59,173 @@
   font-family: ui-monospace, monospace;
 }
 
-.markdown-body pre {
-  background: #18181b;
-  border: 1px solid #3f3f46;
+.markdown-body pre.code-block {
+  background: #0f0f11;
+  border: 1px solid #27272a;
   border-radius: 0.5rem;
   padding: 1rem;
   overflow-x: auto;
   margin: 1rem 0;
 }
 
-.markdown-body pre code {
+.markdown-body pre.code-block code {
   background: none;
   padding: 0;
   color: #d4d4d8;
 }
 
+/* Table */
+.markdown-body .table-wrapper {
+  margin: 1.5rem 0;
+  border: 1px solid #27272a;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: #18181b;
+}
+
 .markdown-body table {
   width: 100%;
   border-collapse: collapse;
-  margin: 1rem 0;
 }
 
 .markdown-body thead {
-  border-bottom: 2px solid #3f3f46;
+  background: #27272a;
 }
 
 .markdown-body th {
   text-align: left;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: #e4e4e7;
-  padding: 0.75rem 0.75rem;
+  color: #a1a1aa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 1rem;
 }
 
 .markdown-body td {
   font-size: 0.875rem;
-  color: #a1a1aa;
-  padding: 0.75rem 0.75rem;
-  border-bottom: 1px solid #27272a;
+  color: #d4d4d8;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #27272a;
 }
 
-.markdown-body tr:hover td {
-  background: rgba(39, 39, 42, 0.5);
+.markdown-body tr.table-row {
+  cursor: pointer;
+  transition: background 0.15s;
 }
 
+.markdown-body tr.table-row:hover {
+  background: #27272a;
+}
+
+/* Method Badges */
+.markdown-body .method-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
+}
+
+.markdown-body .method-badge[data-method="GET"],
+.markdown-body th.method-header[data-method="GET"] {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.markdown-body .method-badge[data-method="POST"],
+.markdown-body th.method-header[data-method="POST"] {
+  background: rgba(14, 165, 233, 0.15);
+  color: #38bdf8;
+  border-color: rgba(14, 165, 233, 0.3);
+}
+
+.markdown-body .method-badge[data-method="PUT"],
+.markdown-body th.method-header[data-method="PUT"] {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.markdown-body .method-badge[data-method="PATCH"],
+.markdown-body th.method-header[data-method="PATCH"] {
+  background: rgba(249, 115, 22, 0.15);
+  color: #fb923c;
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+.markdown-body .method-badge[data-method="DELETE"],
+.markdown-body th.method-header[data-method="DELETE"] {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Endpoint Cards */
+.markdown-body .endpoint-card {
+  margin: 1.25rem 0;
+  border: 1px solid #27272a;
+  border-radius: 0.75rem;
+  background: #18181b;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.markdown-body .endpoint-card:hover {
+  border-color: #3f3f46;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.markdown-body .endpoint-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  margin: 0;
+  background: #27272a;
+  font-size: 0.95rem;
+}
+
+.markdown-body .endpoint-path {
+  background: none;
+  padding: 0;
+  color: #e4e4e7;
+  font-size: 0.95rem;
+}
+
+.markdown-body .endpoint-body {
+  padding: 1rem 1.25rem;
+}
+
+/* Lists */
 .markdown-body ul {
-  list-style: disc;
-  padding-left: 1.5rem;
+  list-style: none;
+  padding-left: 0.5rem;
   margin: 0.5rem 0;
 }
 
 .markdown-body li {
   color: #a1a1aa;
   margin: 0.25rem 0;
+  padding-left: 1rem;
+  position: relative;
 }
 
-.markdown-body li::marker {
-  color: #a855f7;
+.markdown-body li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.6rem;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #a855f7;
 }
 
+/* Blockquote */
 .markdown-body blockquote {
   border-left: 3px solid #a855f7;
   background: rgba(39, 39, 42, 0.5);
@@ -116,11 +234,13 @@
   margin: 1rem 0;
 }
 
+/* HR */
 .markdown-body hr {
-  border-color: #3f3f46;
+  border-color: #27272a;
   margin: 1.5rem 0;
 }
 
+/* Links */
 .markdown-body a {
   color: #c084fc;
   text-decoration: none;
@@ -128,4 +248,17 @@
 
 .markdown-body a:hover {
   text-decoration: underline;
+}
+
+/* Skeleton Animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-pulse > div,
+.animate-pulse > div > div {
+  background: linear-gradient(90deg, #27272a 25%, #3f3f46 50%, #27272a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
 }
