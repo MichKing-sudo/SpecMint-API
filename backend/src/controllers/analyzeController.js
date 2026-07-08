@@ -1,35 +1,65 @@
 const { extractRoutes } = require('../utils/extractor');
 const { generateDocumentation } = require('../utils/huggingface');
+const { generateDocumentation: generateGeminiDocumentation } = require('../utils/gemini');
+const { detectLanguage, getLanguageName, getSupportedLanguages } = require('../utils/languageDetector');
 
 async function analyzeCode(req, res) {
   try {
-    const { code } = req.body;
+    const { code, language: forcedLanguage } = req.body;
 
     if (!code || typeof code !== 'string') {
       return res.status(400).json({ error: 'No code provided' });
     }
 
-    const routes = extractRoutes(code);
+    const language = forcedLanguage || detectLanguage(code);
 
-    if (routes.length === 0) {
+    if (!language) {
       return res.status(400).json({
-        error: 'No Express routes found in the provided code',
-        hint: 'Make sure your code contains valid app.get(), app.post(), router.get(), etc. calls',
+        error: 'Could not detect programming language',
+        hint: 'Please specify the language or use a supported framework',
+        supportedLanguages: getSupportedLanguages(),
       });
     }
 
-    const markdown = await generateDocumentation(routes, code);
+    const routes = extractRoutes(code, language);
 
-    res.json({ routes, markdown });
+    if (routes.length === 0) {
+      const langName = getLanguageName(language);
+      return res.status(400).json({
+        error: `No routes found in the provided ${langName} code`,
+        hint: `Make sure your code contains valid route definitions for ${langName}`,
+        detectedLanguage: language,
+      });
+    }
+
+    let markdown;
+
+    const hasGeminiKey = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length > 0;
+    const hasHfKey = process.env.HF_API_KEY && process.env.HF_API_KEY.trim().length > 0;
+
+    if (hasGeminiKey) {
+      markdown = await generateGeminiDocumentation(routes, code, language);
+    } else if (hasHfKey) {
+      markdown = await generateDocumentation(routes, code, language);
+    } else {
+      return res.status(500).json({ error: 'No AI API key configured. Set GEMINI_API_KEY or HF_API_KEY.' });
+    }
+
+    res.json({
+      routes,
+      markdown,
+      detectedLanguage: language,
+      languageName: getLanguageName(language),
+    });
   } catch (err) {
     console.error('Analysis error:', err.message);
 
     if (err.message.includes('API_KEY_INVALID')) {
-      return res.status(500).json({ error: 'Invalid Gemini API key. Check your GEMINI_API_KEY environment variable.' });
+      return res.status(500).json({ error: 'Invalid API key. Check your GEMINI_API_KEY or HF_API_KEY environment variable.' });
     }
 
     if (err.message.includes('fetch') || err.message.includes('network') || err.message.includes('ECONNREFUSED')) {
-      return res.status(500).json({ error: 'Could not reach Gemini API. Check your network and GEMINI_API_KEY.' });
+      return res.status(500).json({ error: 'Could not reach AI API. Check your network and API keys.' });
     }
     res.status(500).json({ error: `Failed to generate documentation: ${err.message}` });
   }

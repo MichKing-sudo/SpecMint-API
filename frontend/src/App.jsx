@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Loader2, Zap, Trash2 } from 'lucide-react';
 import CodeEditor from './components/CodeEditor';
 import MarkdownViewer from './components/MarkdownViewer';
+import LanguageSelector from './components/LanguageSelector';
 
-const SAMPLE_CODE = `const express = require('express');
+const SAMPLE_CODES = {
+  express: `const express = require('express');
 const router = express.Router();
 
 router.get('/api/v1/users', async (req, res) => {
@@ -32,39 +34,242 @@ router.delete('/api/v1/users/:id', async (req, res) => {
   res.status(204).send();
 });
 
-router.get('/api/v1/posts', async (req, res) => {
-  const posts = await Post.findAll();
-  res.json({ success: true, data: posts });
-});
+module.exports = router;`,
 
-router.post('/api/v1/posts', async (req, res) => {
-  const post = await Post.create(req.body);
-  res.status(201).json({ success: true, data: post });
-});
+  flask: `from flask import Flask, request, jsonify
 
-module.exports = router;`;
+app = Flask(__name__)
+
+@app.route('/api/v1/users', methods=['GET'])
+def get_users():
+    users = User.query.all()
+    return jsonify({"success": True, "data": [u.to_dict() for u in users]})
+
+@app.route('/api/v1/users', methods=['POST'])
+def create_user():
+    data = request.get_json()
+    user = User(**data)
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({"success": True, "data": user.to_dict()}), 201
+
+@app.route('/api/v1/users/<int:user_id>', methods=['GET'])
+def get_user(user_id):
+    user = User.query.get_or_404(user_id)
+    return jsonify({"success": True, "data": user.to_dict()})
+
+@app.route('/api/v1/users/<int:user_id>', methods=['PUT'])
+def update_user(user_id):
+    user = User.query.get_or_404(user_id)
+    data = request.get_json()
+    for key, value in data.items():
+        setattr(user, key, value)
+    db.session.commit()
+    return jsonify({"success": True, "data": user.to_dict()})
+
+@app.route('/api/v1/users/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    return '', 204`,
+
+  fastapi: `from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class UserCreate(BaseModel):
+    name: str
+    email: str
+
+@app.get("/api/v1/users")
+async def get_users():
+    users = await User.all()
+    return {"success": True, "data": users}
+
+@app.post("/api/v1/users", status_code=201)
+async def create_user(user: UserCreate):
+    new_user = await User.create(**user.dict())
+    return {"success": True, "data": new_user}
+
+@app.get("/api/v1/users/{user_id}")
+async def get_user(user_id: int):
+    user = await User.get_or_none(id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Not found")
+    return {"success": True, "data": user}
+
+@app.put("/api/v1/users/{user_id}")
+async def update_user(user_id: int, user: UserCreate):
+    existing = await User.get_or_none(id=user_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Not found")
+    await existing.update_from_dict(user.dict())
+    await existing.save()
+    return {"success": True, "data": existing}
+
+@app.delete("/api/v1/users/{user_id}")
+async def delete_user(user_id: int):
+    user = await User.get_or_none(id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Not found")
+    await user.delete()
+    return None, 204`,
+
+  django: `from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('api/v1/users', views.user_list, name='user-list'),
+    path('api/v1/users/<int:pk>', views.user_detail, name='user-detail'),
+    path('api/v1/posts', views.post_list, name='post-list'),
+]`,
+
+  rails: `Rails.application.routes.draw do
+  get 'api/v1/users', to: 'users#index'
+  post 'api/v1/users', to: 'users#create'
+  get 'api/v1/users/:id', to: 'users#show'
+  put 'api/v1/users/:id', to: 'users#update'
+  delete 'api/v1/users/:id', to: 'users#destroy'
+end`,
+
+  gin: `package main
+
+import (
+    "github.com/gin-gonic/gin"
+)
+
+func main() {
+    r := gin.Default()
+
+    r.GET("/api/v1/users", getUsers)
+    r.POST("/api/v1/users", createUser)
+    r.GET("/api/v1/users/:id", getUser)
+    r.PUT("/api/v1/users/:id", updateUser)
+    r.DELETE("/api/v1/users/:id", deleteUser)
+
+    r.Run(":8080")
+}`,
+
+  spring: `@RestController
+@RequestMapping("/api/v1")
+public class UserController {
+
+    @GetMapping("/users")
+    public ResponseEntity<List<User>> getUsers() {
+        return ResponseEntity.ok(userService.findAll());
+    }
+
+    @PostMapping("/users")
+    public ResponseEntity<User> createUser(@RequestBody User user) {
+        return ResponseEntity.status(201).body(userService.create(user));
+    }
+
+    @GetMapping("/users/{id}")
+    public ResponseEntity<User> getUser(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.findById(id));
+    }
+
+    @PutMapping("/users/{id}")
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User user) {
+        return ResponseEntity.ok(userService.update(id, user));
+    }
+
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        userService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+}`,
+
+  laravel: `<?php
+
+use Illuminate\\Support\\Facades\\Route;
+
+Route::get('/api/v1/users', [UserController::class, 'index']);
+Route::post('/api/v1/users', [UserController::class, 'store']);
+Route::get('/api/v1/users/{id}', [UserController::class, 'show']);
+Route::put('/api/v1/users/{id}', [UserController::class, 'update']);
+Route::delete('/api/v1/users/{id}', [UserController::class, 'destroy']);`,
+
+  aspnet: `[ApiController]
+[Route("api/v1/[controller]")]
+public class UsersController : ControllerBase
+{
+    [HttpGet]
+    public IActionResult GetUsers()
+    {
+        return Ok(_service.GetAll());
+    }
+
+    [HttpPost]
+    public IActionResult CreateUser([FromBody] User user)
+    {
+        return CreatedAtAction(nameof(GetUser), new { id = user.Id }, _service.Create(user));
+    }
+
+    [HttpGet("{id}")]
+    public IActionResult GetUser(int id)
+    {
+        var user = _service.GetById(id);
+        if (user == null) return NotFound();
+        return Ok(user);
+    }
+
+    [HttpPut("{id}")]
+    public IActionResult UpdateUser(int id, [FromBody] User user)
+    {
+        var updated = _service.Update(id, user);
+        if (updated == null) return NotFound();
+        return Ok(updated);
+    }
+
+    [HttpDelete("{id}")]
+    public IActionResult DeleteUser(int id)
+    {
+        _service.Delete(id);
+        return NoContent();
+    }
+}`,
+};
+
+const LANGUAGES = [
+  { id: 'express', name: 'Express.js' },
+  { id: 'flask', name: 'Flask' },
+  { id: 'fastapi', name: 'FastAPI' },
+  { id: 'django', name: 'Django' },
+  { id: 'rails', name: 'Ruby on Rails' },
+  { id: 'gin', name: 'Go (Gin)' },
+  { id: 'spring', name: 'Java (Spring)' },
+  { id: 'laravel', name: 'PHP (Laravel)' },
+  { id: 'aspnet', name: 'C# (ASP.NET)' },
+];
 
 export default function App() {
   const [code, setCode] = useState('');
   const [markdown, setMarkdown] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('express');
+  const [detectedLanguage, setDetectedLanguage] = useState(null);
 
   const handleAnalyze = async () => {
     if (!code.trim()) {
-      setError('Paste some Express code first');
+      setError('Paste some code first');
       return;
     }
 
     setLoading(true);
     setError('');
     setMarkdown('');
+    setDetectedLanguage(null);
 
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, language: selectedLanguage }),
       });
 
       const data = await res.json();
@@ -75,6 +280,9 @@ export default function App() {
       }
 
       setMarkdown(data.markdown);
+      if (data.detectedLanguage) {
+        setDetectedLanguage(data.languageName);
+      }
     } catch (err) {
       setError('Could not connect to backend. Is the server running?');
     } finally {
@@ -83,14 +291,14 @@ export default function App() {
   };
 
   const handleLoadSample = () => {
-    setCode(SAMPLE_CODE);
+    setCode(SAMPLE_CODES[selectedLanguage]);
     setMarkdown('');
     setError('');
+    setDetectedLanguage(null);
   };
 
   return (
     <div className="h-screen flex flex-col bg-zinc-950 text-zinc-100">
-      {/* Header */}
       <header className="flex items-center justify-between px-6 py-3 border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center">
@@ -103,9 +311,15 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3">
+          <LanguageSelector
+            languages={LANGUAGES}
+            value={selectedLanguage}
+            onChange={setSelectedLanguage}
+          />
+
           {code && (
             <button
-              onClick={() => { setCode(''); setMarkdown(''); setError(''); }}
+              onClick={() => { setCode(''); setMarkdown(''); setError(''); setDetectedLanguage(null); }}
               className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-zinc-800 text-zinc-400 hover:text-red-400 hover:bg-zinc-700 transition-colors"
             >
               <Trash2 size={12} />
@@ -140,21 +354,23 @@ export default function App() {
         </div>
       </header>
 
-      {/* Error */}
       {error && (
         <div className="px-6 py-2 bg-red-500/10 border-b border-red-500/20 text-red-400 text-sm">
           {error}
         </div>
       )}
 
-      {/* Split Pane */}
+      {detectedLanguage && !error && (
+        <div className="px-6 py-1.5 bg-purple-500/10 border-b border-purple-500/20 text-purple-300 text-xs">
+          Detected: {detectedLanguage}
+        </div>
+      )}
+
       <div className="flex-1 flex min-h-0">
-        {/* Left: Editor */}
         <div className="w-1/2 border-r border-zinc-800">
-          <CodeEditor value={code} onChange={setCode} />
+          <CodeEditor value={code} onChange={setCode} language={selectedLanguage} />
         </div>
 
-        {/* Right: Viewer */}
         <div className="w-1/2">
           <MarkdownViewer content={markdown} loading={loading} />
         </div>

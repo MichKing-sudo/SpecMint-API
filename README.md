@@ -1,6 +1,18 @@
 # SpecMint-API
 
-Automated API documentation generator for Node.js/Express backends. Paste your code, get clean Markdown docs with tables, endpoint cards, and response examples — powered by AI.
+Automated API documentation generator for any backend framework. Paste your code, get clean Markdown docs with tables, endpoint cards, and response examples — powered by AI.
+
+## Supported Languages & Frameworks
+
+| Language | Frameworks |
+|----------|------------|
+| JavaScript | Express.js |
+| Python | Flask, FastAPI, Django |
+| Ruby | Ruby on Rails |
+| Go | Gin, Echo, net/http |
+| Java | Spring Boot |
+| PHP | Laravel |
+| C# | ASP.NET Core |
 
 ## Tech Stack
 
@@ -20,17 +32,19 @@ SpecMint-API/
 │       ├── controllers/
 │       │   └── analyzeController.js
 │       └── utils/
-│           ├── extractor.js       # Route extraction from code
+│           ├── extractor.js       # Multi-language route extraction
+│           ├── languageDetector.js # Auto-detect programming language
+│           ├── prompts.js         # Language-specific AI prompts
 │           ├── huggingface.js     # HuggingFace prompt + API
 │           └── gemini.js          # Gemini prompt + API
 ├── frontend/
 │   └── src/
 │       ├── App.jsx                # Main layout (split pane)
 │       ├── components/
-│       │   ├── CodeEditor.jsx     # Code input editor
+│       │   ├── CodeEditor.jsx     # Multi-language code editor
 │       │   └── MarkdownViewer.jsx # Markdown renderer (react-markdown + remark-gfm)
 │       └── index.css              # Tailwind + markdown-body styles
-├── samples/                       # Example Express code
+├── samples/                       # Example code
 └── package.json                   # Root scripts (dev, dev:backend, dev:frontend)
 ```
 
@@ -80,12 +94,16 @@ Open [http://localhost:5173](http://localhost:5173).
 | Method | Path | Description |
 |---|---|---|
 | GET | `/health` | Health check |
-| POST | `/api/analyze` | Send Express code, get Markdown docs |
+| GET | `/api/languages` | List supported languages |
+| POST | `/api/analyze` | Send code, get Markdown docs |
 
 **POST /api/analyze** — Request body:
 
 ```json
-{ "code": "const router = require('express').Router(); ..." }
+{
+  "code": "const router = require('express').Router(); ...",
+  "language": "express"
+}
 ```
 
 Response:
@@ -93,17 +111,21 @@ Response:
 ```json
 {
   "routes": [{ "method": "GET", "path": "/api/v1/users" }],
-  "markdown": "# API Documentation\n\n## Endpoints\n..."
+  "markdown": "# API Documentation\n\n## Endpoints\n...",
+  "detectedLanguage": "express",
+  "languageName": "Express.js"
 }
 ```
 
 ## Features
 
-- **Route extraction** — Parses Express code to find all `router.get()`, `.post()`, `.put()`, `.patch()`, `.delete()` calls
+- **Multi-language support** — Works with Express.js, Flask, FastAPI, Django, Rails, Gin, Spring, Laravel, ASP.NET
+- **Auto-detection** — Automatically detects the programming language from code patterns
+- **Language selector** — Manual language selection with sample code for each framework
+- **Route extraction** — Parses code to find all route definitions
 - **AI documentation** — Generates descriptions, parameters, example responses, and error responses from source code
 - **GitHub-flavored tables** — Endpoint summary rendered as proper Markdown tables with method badges
-- **Path param detection** — Only lists `req.params` for routes containing `:` segments
-- **204 handling** — Endpoints with no body show `No Content (Status 204)` instead of empty code blocks
+- **Language-aware syntax highlighting** — Code editor highlights keywords specific to each language
 - **Dark-mode UI** — Split pane editor + live markdown preview with copy-to-clipboard
 
 ## License
