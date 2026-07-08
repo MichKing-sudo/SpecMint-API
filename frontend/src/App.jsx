@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Loader2, Zap, Trash2 } from 'lucide-react';
 import CodeEditor from './components/CodeEditor';
 import MarkdownViewer from './components/MarkdownViewer';
@@ -246,13 +246,55 @@ const LANGUAGES = [
   { id: 'aspnet', name: 'C# (ASP.NET)' },
 ];
 
+const LANG_PATTERNS = {
+  express: [/require\s*\(\s*['"]express['"]\s*\)/i, /import\s+.*from\s+['"]express['"]/i, /\bapp\.(get|post|put|patch|delete)\s*\(/i, /\brouter\.(get|post|put|patch|delete)\s*\(/i],
+  flask: [/from\s+flask\s+import/i, /@app\.route\s*\(/i, /@blueprint\.route\s*\(/i],
+  fastapi: [/from\s+fastapi\s+import/i, /@app\.(get|post|put|patch|delete)\s*\(/i, /APIRouter\s*\(/i],
+  django: [/from\s+django\.conf\.urls\s+import/i, /from\s+django\.urls\s+import\s+path/i, /urlpatterns\s*=/i],
+  rails: [/Rails\.application\.routes/i, /\b(get|post|put|patch|delete)\s+['"]/i, /resources?\s+:/i],
+  gin: [/gin\.Default\s*\(\)/i, /gin\.New\s*\(\)/i, /\.(GET|POST|PUT|PATCH|DELETE)\s*\(/i],
+  spring: [/@RestController/i, /@RequestMapping/i, /@(Get|Post|Put|Delete|Patch)Mapping/i],
+  laravel: [/Route::(get|post|put|patch|delete)\s*\(/i, /use\s+Illuminate\\Support\\Facades\\Route/i],
+  aspnet: [/\[HttpGet\s*\]/i, /\[HttpPost\s*\]/i, /\[HttpPut\s*\]/i, /\[HttpDelete\s*\]/i, /\[ApiController\]/i],
+};
+
+function detectLanguage(code) {
+  if (!code || code.trim().length < 10) return null;
+  const scores = {};
+  for (const [key, patterns] of Object.entries(LANG_PATTERNS)) {
+    scores[key] = 0;
+    for (const pattern of patterns) {
+      if (pattern.test(code)) scores[key]++;
+    }
+  }
+  let best = null;
+  let bestScore = 0;
+  for (const [key, score] of Object.entries(scores)) {
+    if (score > bestScore) { bestScore = score; best = key; }
+  }
+  return bestScore > 0 ? best : null;
+}
+
 export default function App() {
   const [code, setCode] = useState('');
   const [markdown, setMarkdown] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedLanguage, setSelectedLanguage] = useState('express');
+  const [selectedLanguage, setSelectedLanguage] = useState(null);
   const [detectedLanguage, setDetectedLanguage] = useState(null);
+  const lastDetectedRef = useRef(null);
+
+  useEffect(() => {
+    if (!code || code.trim().length < 20) {
+      lastDetectedRef.current = null;
+      return;
+    }
+    const detected = detectLanguage(code);
+    if (detected && detected !== lastDetectedRef.current) {
+      lastDetectedRef.current = detected;
+      setSelectedLanguage(detected);
+    }
+  }, [code]);
 
   const handleAnalyze = async () => {
     if (!code.trim()) {
@@ -291,10 +333,12 @@ export default function App() {
   };
 
   const handleLoadSample = () => {
-    setCode(SAMPLE_CODES[selectedLanguage]);
+    const lang = selectedLanguage || 'express';
+    setCode(SAMPLE_CODES[lang]);
     setMarkdown('');
     setError('');
     setDetectedLanguage(null);
+    lastDetectedRef.current = null;
   };
 
   return (
@@ -319,7 +363,7 @@ export default function App() {
 
           {code && (
             <button
-              onClick={() => { setCode(''); setMarkdown(''); setError(''); setDetectedLanguage(null); }}
+              onClick={() => { setCode(''); setMarkdown(''); setError(''); setDetectedLanguage(null); setSelectedLanguage(null); lastDetectedRef.current = null; }}
               className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-zinc-800 text-zinc-400 hover:text-red-400 hover:bg-zinc-700 transition-colors"
             >
               <Trash2 size={12} />

@@ -48,7 +48,12 @@ Then for each route:
 8. Generate meaningful descriptions from the route paths and code logic.
 9. Group routes logically by their base path.
 10. Path parameters MUST ONLY be listed for routes whose path contains parameters.
-11. If an endpoint returns no body, do NOT create an empty JSON code block. Instead, write exactly: **Response:** No Content (Status 204).`;
+11. If an endpoint returns no body, do NOT create an empty JSON code block. Instead, write exactly: **Response:** No Content (Status 204).
+
+## [REGLAS ESTRICTAS DE RESPUESTA JSON]
+1. SIEMPRE abre los bloques de código de respuesta usando \`\`\`json. Está prohibido dejar el bloque sin etiqueta o genérico. NUNCA uses \`\`\` sin "json" después.
+2. Formatea CUALQUIER booleano dentro de los bloques de ejemplo al estándar JSON estricto: escribe "true" y "false" en minúsculas, NUNCA "True" o "False", incluso si el código fuente es Python o usa otros valores. Esto aplica a TODAS las respuestas de ejemplo y respuestas de error.
+3. Formatea "null" en minúsculas, NUNCA "None" o "Null".`;
 
 const LANGUAGE_SPECIFIC_NOTES = {
   express: `

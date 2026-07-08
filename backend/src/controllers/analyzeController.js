@@ -3,6 +3,23 @@ const { generateDocumentation } = require('../utils/huggingface');
 const { generateDocumentation: generateGeminiDocumentation } = require('../utils/gemini');
 const { detectLanguage, getLanguageName, getSupportedLanguages } = require('../utils/languageDetector');
 
+function sanitizeMarkdown(aiResponse) {
+  if (!aiResponse) return '';
+
+  let clean = aiResponse;
+
+  // 1. Forzar que los bloques de código vacíos o planos tengan la etiqueta "json"
+  clean = clean.replace(/```\n([\s\S]*?```)/g, '```json\n$1');
+
+  // 2. Corregir booleanos de Python dentro de los bloques de código del Markdown
+  clean = clean.replace(/: True/g, ': true').replace(/: False/g, ': false');
+
+  // 3. Corregir None a null
+  clean = clean.replace(/: None/g, ': null');
+
+  return clean;
+}
+
 async function analyzeCode(req, res) {
   try {
     const { code, language: forcedLanguage } = req.body;
@@ -44,6 +61,9 @@ async function analyzeCode(req, res) {
     } else {
       return res.status(500).json({ error: 'No AI API key configured. Set GEMINI_API_KEY or HF_API_KEY.' });
     }
+
+    // Sanitizar el markdown antes de enviarlo
+    markdown = sanitizeMarkdown(markdown);
 
     res.json({
       routes,

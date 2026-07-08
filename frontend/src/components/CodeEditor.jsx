@@ -155,7 +155,7 @@ function highlightCode(code, language) {
   return result;
 }
 
-export default function CodeEditor({ value, onChange, language = 'express' }) {
+export default function CodeEditor({ value, onChange, language = null }) {
   const [focused, setFocused] = useState(false);
   const textareaRef = useRef(null);
   const highlightRef = useRef(null);
@@ -185,7 +185,7 @@ export default function CodeEditor({ value, onChange, language = 'express' }) {
       <div className="flex items-center justify-between px-4 py-2 bg-zinc-800 border-b border-zinc-700">
         <div className="flex items-center gap-2">
           <Code2 size={16} className="text-purple-400" />
-          <span className="text-sm font-medium text-zinc-300">{LANGUAGE_LABELS[language] || language}</span>
+          <span className="text-sm font-medium text-zinc-300">{LANGUAGE_LABELS[language] || 'Code'}</span>
         </div>
         {value && (
           <button
@@ -218,7 +218,7 @@ export default function CodeEditor({ value, onChange, language = 'express' }) {
           onScroll={handleScroll}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder={`Paste your ${LANGUAGE_LABELS[language] || language} code here...`}
+          placeholder={language ? `Paste your ${LANGUAGE_LABELS[language] || language} code here...` : 'Paste your code here...'}
           spellCheck={false}
           autoComplete="off"
           autoCorrect="off"
